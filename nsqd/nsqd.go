@@ -218,10 +218,11 @@ func (n *NSQD) Main() {
 		n.logf("FATAL: listen (%s) failed - %s", n.getOpts().TCPAddress, err)
 		os.Exit(1)
 	}
-	n.Lock()
+	n.Lock() //锁定整个nsqd
 	n.tcpListener = tcpListener
 	n.Unlock()
-	tcpServer := &tcpServer{ctx: ctx}
+	// tcp.go 也在nsqd的package下面 所以可以直接调用
+	tcpServer := &tcpServer{ctx: ctx} //tcpListener每accept一个conn 就启动一个线程handler.Handle(clientConn) 由Handle进行具体命令操作
 	n.waitGroup.Wrap(func() {
 		protocol.TCPServer(n.tcpListener, tcpServer, n.getOpts().Logger)
 	})
@@ -253,8 +254,8 @@ func (n *NSQD) Main() {
 		http_api.Serve(n.httpListener, httpServer, "HTTP", n.getOpts().Logger)
 	})
 
-	n.waitGroup.Wrap(func() { n.queueScanLoop() })
-	n.waitGroup.Wrap(func() { n.idPump() })
+	n.waitGroup.Wrap(func() { n.queueScanLoop() }) # 对于超时 失败的消息的重发
+	n.waitGroup.Wrap(func() { n.idPump() })  # 生成全局message id
 	n.waitGroup.Wrap(func() { n.lookupLoop() })
 	if n.getOpts().StatsdAddress != "" {
 		n.waitGroup.Wrap(func() { n.statsdLoop() })

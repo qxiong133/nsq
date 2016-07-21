@@ -30,6 +30,7 @@ func TCPServer(listener net.Listener, handler TCPHandler, l app.Logger) {
 			}
 			break
 		}
+		//  如果nsqd退出了 这个线程怎么处理呢  如果conn的请求还没有完成?
 		go handler.Handle(clientConn)
 	}
 

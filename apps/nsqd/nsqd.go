@@ -177,7 +177,9 @@ type program struct {
 }
 
 func main() {
-	prg := &program{}
+	// nsqd的入口函数
+	prg := &program{}   // 使用svc库 这个库分成windows版本和other go在根据不同操作系统会使用不同的文件编译 在文件的头部注释有  +build !windows
+	// svc启动服务分为init start stop
 	if err := svc.Run(prg, syscall.SIGINT, syscall.SIGTERM); err != nil {
 		log.Fatal(err)
 	}
@@ -192,6 +194,7 @@ func (p *program) Init(env svc.Environment) error {
 }
 
 func (p *program) Start() error {
+	//初始化opts结构 填充默认的参数
 	opts := nsqd.NewOptions()
 
 	flagSet := nsqdFlagSet(opts)
@@ -203,7 +206,7 @@ func (p *program) Start() error {
 		fmt.Println(version.String("nsqd"))
 		os.Exit(0)
 	}
-
+	//如果有配置文件 读取配置文件信息
 	var cfg config
 	configFile := flagSet.Lookup("config").Value.String()
 	if configFile != "" {
@@ -213,15 +216,17 @@ func (p *program) Start() error {
 		}
 	}
 	cfg.Validate()
-
+	// merge配置信息 根据初始化nsqd
 	options.Resolve(opts, flagSet, cfg)
 	nsqd := nsqd.New(opts)
-
+	// 加载之前的元数据 json格式保存的  topics channels
+	// 把元数据topic和相关的channel再持久化 到本地磁盘文件
 	nsqd.LoadMetadata()
 	err := nsqd.PersistMetadata()
 	if err != nil {
 		log.Fatalf("ERROR: failed to persist metadata - %s", err.Error())
 	}
+	//主要的逻辑 创建
 	nsqd.Main()
 
 	p.nsqd = nsqd

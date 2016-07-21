@@ -78,7 +78,7 @@ func (n *NSQD) lookupLoop() {
 		}
 
 		select {
-		case <-ticker:
+		case <-ticker: // 每15s发送心跳
 			// send a heartbeat and read a response (read detects closed conns)
 			for _, lookupPeer := range lookupPeers {
 				n.logf("LOOKUPD(%s): sending heartbeat", lookupPeer)
@@ -160,7 +160,7 @@ func (n *NSQD) lookupLoop() {
 			lookupPeers = tmpPeers
 			lookupAddrs = tmpAddrs
 			connect = true
-		case <-n.exitChan:
+		case <-n.exitChan:  // nsqd如果要退出了 不应该通知一下lookupd 自己退出了? 靠lookup自己检测
 			goto exit
 		}
 	}
